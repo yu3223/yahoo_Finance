@@ -78,37 +78,44 @@ def run_stock_master():
 
     close_prices = data['Close']
     
-    print("3. 正在整理數據 (包含產業分類)...")
+    print("3. 正在整理數據 (排除無數據個股並對齊最近 120 天)...")
+    
+    # 建立統一的日期基準標籤
+    latest_120_dates = close_prices.index.sort_values(ascending=False)[:121]
+    date_labels = latest_120_dates.strftime('%Y-%m-%d').tolist()
+    
     final_rows = []
     
     for stock in close_prices.columns:
-        s_price = close_prices[stock].dropna()
-        if s_price.empty:
-            continue
+        # 使用 reindex 對齊基準日期
+        s_price_aligned = close_prices[stock].reindex(latest_120_dates)
         
-        # 取得最近 120 個交易日數據
-        last_120 = s_price.tail(120).copy()
-        last_120.index = last_120.index.strftime('%Y-%m-%d')
+        # --- 【核心修正：排除全空白股票】 ---
+        # 如果這 120 天中，扣除掉空白(NaN)後什麼都不剩，代表該股票完全沒交易數據
+        if s_price_aligned.dropna().empty:
+            continue 
+        # -----------------------------------
         
-        # 建立列資料：代號 + 名稱 + 產業 + 價格
+        # 建立列資料
         row_data = {
             '股票代號': stock_info_map[stock]['code'],
             '股票名稱': stock_info_map[stock]['name'],
             '產業分類': stock_info_map[stock]['group']
         }
         
-        # 合併價格數據
-        prices_dict = last_120.round(1).to_dict()
+        # 將數值轉為字典並四捨五入到小數第一位
+        s_price_aligned.index = s_price_aligned.index.strftime('%Y-%m-%d')
+        prices_dict = s_price_aligned.round(1).to_dict()
         row_data.update(prices_dict)
+        
         final_rows.append(row_data)
     
     # 建立 DataFrame
     temp_df = pd.DataFrame(final_rows)
     
-    # 確保日期由新到舊排序，並將文字欄位放在最左側
+    # 欄位順序保持一致
     meta_cols = ['股票代號', '股票名稱', '產業分類']
-    date_cols = sorted([c for c in temp_df.columns if c not in meta_cols], reverse=True)
-    result_df = temp_df[meta_cols + date_cols]
+    result_df = temp_df[meta_cols + date_labels]
     
     print(f"4. 正在產生報表 (檔案名稱: tw_stock_with_industry.xlsx)...")
     filename = "tw_stock_with_industry.xlsx"
