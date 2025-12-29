@@ -1,7 +1,11 @@
 import yfinance as yf
 import pandas as pd
 import twstock
+import multitasking # 新增這行
 import os
+
+# 強制停止 multitasking 的多執行緒，避免 Windows 環境崩潰
+multitasking.set_max_threads(1)
 
 def save_with_style(df, filename):
     print("   -> 正在計算漲跌顏色樣式...")
