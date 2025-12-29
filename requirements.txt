@@ -1,0 +1,6 @@
+yfinance
+pandas
+twstock
+openpyxl
+lxml
+pyinstaller

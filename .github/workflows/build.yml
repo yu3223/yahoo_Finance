@@ -1,0 +1,35 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ main ]  # 當你上傳到 main 分支時會自動執行
+  workflow_dispatch:     # 也可以手動點擊執行
+
+jobs:
+  build:
+    runs-on: windows-latest  # 指定在 Windows 環境運行
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' # 建議用 3.12 打包，較穩定
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build with PyInstaller
+      run: |
+        # 使用 --collect-all twstock 確保股票代碼資料庫被包進去
+        pyinstaller --onefile --collect-all twstock batch_crawler.py
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: StockMaster-Windows-Exe
+        path: dist/batch_crawler.exe
